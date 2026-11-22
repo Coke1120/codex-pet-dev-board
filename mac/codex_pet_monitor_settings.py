@@ -3,7 +3,8 @@
 import re
 import secrets
 from html import escape
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler
+from socketserver import TCPServer
 
 from codex_pet_monitor import PROVIDERS, read_monitor_selection, save_provider
 
@@ -130,8 +131,9 @@ def serve_settings(state_dir):
                 return
             self._respond(200, render_settings(state_dir, "Provider saved."))
 
-    with HTTPServer(("127.0.0.1", 0), SettingsHandler) as server:
-        host = f"127.0.0.1:{server.server_port}"
+    # The numeric endpoint does not need HTTPServer's reverse lookup at bind.
+    with TCPServer(("127.0.0.1", 0), SettingsHandler) as server:
+        host = f"127.0.0.1:{server.server_address[1]}"
         origin = "http://" + host
         print(origin + capability_path, flush=True)
         try:

@@ -129,6 +129,22 @@ class MonitorTests(unittest.TestCase):
             self.assertIn('value="claude-code" checked', self.request(new_url)[1])
             self.assertEqual(self.daemon_once().stdout.strip(), "idle")
 
+    def test_settings_starts_and_serves_without_hostname_lookup(self):
+        probe = self.root / "resolver"
+        probe.mkdir()
+        (probe / "sitecustomize.py").write_text(
+            "import socket\n"
+            "def unexpected_lookup(*args, **kwargs):\n"
+            "    raise AssertionError('unexpected hostname lookup')\n"
+            "socket.getfqdn = unexpected_lookup\n",
+            encoding="utf-8",
+        )
+        self.env["PYTHONPATH"] = str(probe)
+        with self.process("codex_pet_monitor.py", "settings") as child:
+            url = urlsplit(self.line(child))
+            self.assertEqual(url.hostname, "127.0.0.1")
+            self.assertEqual(self.request(url)[0], 200)
+
     def test_settings_rejects_invalid_http_without_saving(self):
         with self.process("codex_pet_monitor.py", "settings") as child:
             url = urlsplit(self.line(child))
