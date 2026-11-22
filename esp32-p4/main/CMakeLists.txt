@@ -13,7 +13,13 @@ idf_component_register(
     INCLUDE_DIRS "."
     REQUIRES esp_driver_uart esp_timer esp_event esp_netif esp_wifi bt esp_hosted
              lvgl esp32_p4_jc4880p433c_bsp
+    PRIV_REQUIRES bootloader_support esp_driver_i2c esp_driver_i2s esp_http_client
+                  mbedtls nvs_flash
 )
+
+if(CONFIG_CODEX_PET_VOICE)
+    target_sources(${COMPONENT_LIB} PRIVATE "pet_voice.c" "pet_voice_capture.c")
+endif()
 
 target_compile_options(${COMPONENT_LIB} PRIVATE
     -fstack-usage

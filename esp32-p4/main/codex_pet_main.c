@@ -26,6 +26,10 @@
 #include "pet_wireless.h"
 #include "sdkconfig.h"
 
+#ifdef CONFIG_CODEX_PET_VOICE
+#include "pet_voice.h"
+#endif
+
 #define DISPLAY_WIDTH 480
 #define DISPLAY_HEIGHT 800
 #define TODAY_PANEL_HEIGHT 510
@@ -272,6 +276,11 @@ typedef struct {
     lv_obj_t *settings_ble_button_label;
     lv_obj_t *settings_network_buttons[SETTINGS_NETWORK_BUTTON_COUNT];
     lv_obj_t *settings_network_labels[SETTINGS_NETWORK_BUTTON_COUNT];
+#ifdef CONFIG_CODEX_PET_VOICE
+    lv_obj_t *voice_button;
+    lv_obj_t *voice_status;
+    const char *voice_status_text;
+#endif
     lv_obj_t *usage_page;
     lv_obj_t *usage_latest_title;
     lv_obj_t *usage_latest;
@@ -1020,12 +1029,52 @@ static void update_info_labels_locked(void)
     }
 }
 
+#ifdef CONFIG_CODEX_PET_VOICE
+static void update_voice_status_locked(void)
+{
+    const pet_voice_status_t status = pet_voice_get_status();
+    const char *message = status.message;
+    bool enabled = status.phase == PET_VOICE_RECORDING || status.phase == PET_VOICE_RELEASE_TO_SEND;
+    if (pet_voice_accepts_press(status.phase)) {
+        if (ui.wireless.wifi != PET_WIRELESS_WIFI_CONNECTED) {
+            if (status.phase == PET_VOICE_READY) message = "Connect Wi-Fi to send voice";
+        } else if (!pet_voice_clock_ready()) {
+            if (status.phase == PET_VOICE_READY) message = "Waiting for USB clock sync";
+        } else {
+            enabled = true;
+        }
+    }
+    if (enabled) lv_obj_remove_state(ui.voice_button, LV_STATE_DISABLED);
+    else lv_obj_add_state(ui.voice_button, LV_STATE_DISABLED);
+    if (message != ui.voice_status_text) {
+        lv_label_set_text_static(ui.voice_status, message);
+        ui.voice_status_text = message;
+    }
+}
+
+static void voice_button_event(lv_event_t *event)
+{
+    const lv_event_code_t code = lv_event_get_code(event);
+    if (code == LV_EVENT_PRESSED) {
+        if (ui.active_surface != PET_SURFACE_SETTINGS || ui.navigation_animating ||
+            !lv_obj_has_flag(ui.password_dialog, LV_OBJ_FLAG_HIDDEN)) return;
+        pet_voice_press();
+    } else {
+        pet_voice_end_press(code == LV_EVENT_RELEASED);
+    }
+    update_voice_status_locked();
+}
+#endif
+
 static void update_info_timer(lv_timer_t *timer)
 {
     (void)timer;
     update_info_labels_locked();
     update_usage_labels_locked();
     update_wireless_labels_locked();
+#ifdef CONFIG_CODEX_PET_VOICE
+    update_voice_status_locked();
+#endif
 }
 
 static void apply_clock_locked(const pet_clock_command_t *clock)
@@ -1189,6 +1238,9 @@ static void set_settings_progress_locked(int32_t progress)
     if (progress < 0) progress = 0;
     if (progress > PET_PANEL_PROGRESS_MAX) progress = PET_PANEL_PROGRESS_MAX;
     if (progress == ui.settings_progress) return;
+#ifdef CONFIG_CODEX_PET_VOICE
+    if (progress < ui.settings_progress) pet_voice_end_press(false);
+#endif
     ui.settings_progress = progress;
     lv_obj_set_x(ui.settings_page, DISPLAY_WIDTH -
                  DISPLAY_WIDTH * progress / PET_PANEL_PROGRESS_MAX);
@@ -1377,7 +1429,7 @@ static lv_obj_t *create_button(lv_obj_t *parent, const char *text, int x, int y,
     lv_obj_set_style_bg_color(button, lv_color_hex(0x1D2A36), 0);
     lv_obj_set_style_bg_color(button, lv_color_hex(0x2B4052), LV_STATE_PRESSED);
     lv_obj_set_style_shadow_width(button, 0, 0);
-    lv_obj_add_event_cb(button, callback, LV_EVENT_CLICKED, user_data);
+    if (callback != NULL) lv_obj_add_event_cb(button, callback, LV_EVENT_CLICKED, user_data);
     lv_obj_t *label = lv_label_create(button);
     lv_label_set_text(label, text);
     lv_obj_set_style_text_font(label, &lv_font_montserrat_14, 0);
@@ -1503,6 +1555,13 @@ static void create_page_base(lv_obj_t *page)
 
 static void create_settings_page(void)
 {
+#ifdef CONFIG_CODEX_PET_VOICE
+    const int network_spacing = 53;
+    const int ble_top = 670;
+#else
+    const int network_spacing = 56;
+    const int ble_top = 690;
+#endif
     ui.settings_page = lv_obj_create(ui.screen);
     create_page_base(ui.settings_page);
     lv_obj_set_pos(ui.settings_page, DISPLAY_WIDTH, 0);
@@ -1536,22 +1595,36 @@ static void create_settings_page(void)
                  lv_color_hex(0x82909E), 24, 310);
     for (size_t index = 0; index < SETTINGS_NETWORK_BUTTON_COUNT; ++index) {
         ui.settings_network_buttons[index] = create_button(
-            ui.settings_page, "", 24, 340 + (int)index * 56, 432, network_button_event,
+            ui.settings_page, "", 24, 340 + (int)index * network_spacing, 432, network_button_event,
             (void *)(uintptr_t)index, &ui.settings_network_labels[index]);
         lv_obj_add_flag(ui.settings_network_buttons[index], LV_OBJ_FLAG_HIDDEN);
     }
 
     create_label(ui.settings_page, "BLUETOOTH LE", &lv_font_montserrat_14,
-                 lv_color_hex(0x82909E), 24, 690);
+                 lv_color_hex(0x82909E), 24, ble_top);
     ui.settings_ble = create_label(ui.settings_page, "Bluetooth LE disabled",
                                    &lv_font_montserrat_14,
-                                   lv_color_hex(0xDDE6EF), 24, 718);
+                                   lv_color_hex(0xDDE6EF), 24, ble_top + 28);
     ui.settings_ble_button = create_button(
-        ui.settings_page, "Enable", 312, 704, 144, ble_toggle_event, NULL,
+        ui.settings_page, "Enable", 312, ble_top + 14, 144, ble_toggle_event, NULL,
         &ui.settings_ble_button_label);
     lv_obj_add_state(ui.settings_wifi_button, LV_STATE_DISABLED);
     lv_obj_add_state(ui.settings_scan_button, LV_STATE_DISABLED);
     lv_obj_add_state(ui.settings_ble_button, LV_STATE_DISABLED);
+
+#ifdef CONFIG_CODEX_PET_VOICE
+    ui.voice_button = create_button(ui.settings_page, "Hold to talk", 24, 742, 144,
+                                    NULL, NULL, NULL);
+    lv_obj_remove_flag(ui.voice_button, LV_OBJ_FLAG_PRESS_LOCK);
+    lv_obj_add_event_cb(ui.voice_button, voice_button_event, LV_EVENT_PRESSED, NULL);
+    lv_obj_add_event_cb(ui.voice_button, voice_button_event, LV_EVENT_RELEASED, NULL);
+    lv_obj_add_event_cb(ui.voice_button, voice_button_event, LV_EVENT_PRESS_LOST, NULL);
+    ui.voice_status = create_label(ui.settings_page, "", &lv_font_montserrat_14,
+                                   lv_color_hex(0xDDE6EF), 184, 752);
+    lv_obj_set_width(ui.voice_status, 272);
+    lv_label_set_long_mode(ui.voice_status, LV_LABEL_LONG_WRAP);
+    update_voice_status_locked();
+#endif
 }
 
 static void create_usage_page(void)
@@ -1838,6 +1911,9 @@ static void process_command(char *line)
         }
         apply_clock_locked(&command.data.clock);
         bsp_display_unlock();
+#ifdef CONFIG_CODEX_PET_VOICE
+        pet_voice_sync_clock(command.data.clock.unix_epoch);
+#endif
         printf("OK CLOCK\n");
         break;
     case PET_COMMAND_WEATHER:
@@ -1968,6 +2044,10 @@ void app_main(void)
     ESP_LOGI(TAG, "Optional wireless backend disabled at build time");
 #endif
     log_main_init_stack_high_water("wireless");
+
+#ifdef CONFIG_CODEX_PET_VOICE
+    pet_voice_start();
+#endif
 
     BaseType_t created = xTaskCreate(serial_task, "codex_pet_serial", 4096, NULL, 5, NULL);
     if (created != pdPASS) {
