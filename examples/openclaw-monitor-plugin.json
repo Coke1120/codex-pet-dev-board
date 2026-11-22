@@ -1,0 +1,15 @@
+{
+  "plugins": {
+    "load": {
+      "paths": ["/ABSOLUTE/CODEX_PET_RUNTIME/codex-pet-monitor.mjs"]
+    },
+    "entries": {
+      "codex-pet-monitor": {
+        "enabled": true,
+        "hooks": {
+          "allowConversationAccess": true
+        }
+      }
+    }
+  }
+}

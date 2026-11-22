@@ -23,6 +23,7 @@ MAC_DIR = Path(__file__).resolve().parent
 if str(MAC_DIR) not in sys.path:
     sys.path.insert(0, str(MAC_DIR))
 
+from codex_pet_monitor import read_monitor_selection
 from codex_pet_usage import (
     CodexBarQuotaSnapshot,
     CodexBarQuotaWorker,
@@ -566,10 +567,20 @@ def main() -> int:
     sent_quota: Optional[CodexBarQuotaSnapshot] = None
     reported_quota_error: Optional[str] = None
 
+    reported_monitor_diagnostic: Optional[str] = None
     while not stopped:
-        desired = aggregate_state(
-            read_active_states(args.state_dir, active_ttl=args.active_ttl)
-        )
+        selection = read_monitor_selection(args.state_dir, active_ttl=args.active_ttl)
+        if selection.diagnostic != reported_monitor_diagnostic:
+            if selection.diagnostic is not None:
+                print(
+                    f"Codex Pet monitor: {selection.diagnostic} Using Codex lifecycle state.",
+                    file=sys.stderr,
+                )
+            reported_monitor_diagnostic = selection.diagnostic
+        active = selection.active
+        if active is None:
+            active = read_active_states(args.state_dir, active_ttl=args.active_ttl)
+        desired = aggregate_state(active)
 
         if args.dry_run:
             if desired != sent:

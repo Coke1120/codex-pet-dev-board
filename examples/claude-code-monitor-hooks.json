@@ -1,0 +1,25 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      { "hooks": [{ "type": "command", "command": "\"$HOME/Library/Application Support/CodexPet/runtime/bin/python\" \"$HOME/Library/Application Support/CodexPet/runtime/codex_pet_monitor.py\" hook claude-code", "timeout": 3 }] }
+    ],
+    "PermissionRequest": [
+      { "hooks": [{ "type": "command", "command": "\"$HOME/Library/Application Support/CodexPet/runtime/bin/python\" \"$HOME/Library/Application Support/CodexPet/runtime/codex_pet_monitor.py\" hook claude-code", "timeout": 3 }] }
+    ],
+    "PreToolUse": [
+      { "hooks": [{ "type": "command", "command": "\"$HOME/Library/Application Support/CodexPet/runtime/bin/python\" \"$HOME/Library/Application Support/CodexPet/runtime/codex_pet_monitor.py\" hook claude-code", "timeout": 3 }] }
+    ],
+    "PostToolUse": [
+      { "hooks": [{ "type": "command", "command": "\"$HOME/Library/Application Support/CodexPet/runtime/bin/python\" \"$HOME/Library/Application Support/CodexPet/runtime/codex_pet_monitor.py\" hook claude-code", "timeout": 3 }] }
+    ],
+    "Stop": [
+      { "hooks": [{ "type": "command", "command": "\"$HOME/Library/Application Support/CodexPet/runtime/bin/python\" \"$HOME/Library/Application Support/CodexPet/runtime/codex_pet_monitor.py\" hook claude-code", "timeout": 3 }] }
+    ],
+    "SessionEnd": [
+      { "hooks": [{ "type": "command", "command": "\"$HOME/Library/Application Support/CodexPet/runtime/bin/python\" \"$HOME/Library/Application Support/CodexPet/runtime/codex_pet_monitor.py\" hook claude-code", "timeout": 3 }] }
+    ],
+    "StopFailure": [
+      { "hooks": [{ "type": "command", "command": "\"$HOME/Library/Application Support/CodexPet/runtime/bin/python\" \"$HOME/Library/Application Support/CodexPet/runtime/codex_pet_monitor.py\" hook claude-code", "timeout": 3 }] }
+    ]
+  }
+}
