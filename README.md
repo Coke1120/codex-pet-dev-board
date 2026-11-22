@@ -44,7 +44,7 @@ flash, library, or compatibility path in this repository.
 - Persistent macOS LaunchAgent with official Codex lifecycle hooks
 - Local-only generated pet artwork excluded from Git
 
-## Board capabilities not enabled by this repository
+## Board capability support
 
 The JC4880P443C-I-W hardware and its vendor package expose more peripherals than
 the Codex Pet application initializes. The vendored BSP snapshot is retained for
@@ -55,7 +55,7 @@ installs, initializes, tests, or uses it.
 | Board capability | Supplied hardware or BSP path | Codex Pet status |
 |---|---|---|
 | Front camera | MIPI-CSI camera path; the vendor package includes OV02C10 sensor material | Disabled: no camera driver or pipeline, capture, storage, stream, or network upload |
-| Microphone | Onboard microphone through the ES8311 ADC and I2S input | Disabled: no codec initialization, audio capture, or recording |
+| Microphone | Onboard microphone through the ES8311 ADC and I2S input | Off by default. The experimental [push-to-talk build](docs/VOICE_PTT.md) records only during a deliberate press. |
 | Speaker output | ES8311 DAC, NS4150 amplifier, and MX1.25 two-pin speaker connector | Disabled: no audio playback; the bare `I-W` board does not guarantee that a speaker unit is fitted |
 | microSD / TF card | Card slot and BSP mount APIs | Disabled: the application does not mount, read, or write a card |
 | High-speed USB / USB Host | Secondary USB path and BSP host APIs | Disabled: no HID, storage, audio, video, or network class; the maintained host link is USB Serial/JTAG |
@@ -70,9 +70,9 @@ layers down without releasing the memory needed for a later restart. The
 potentially blocking NimBLE stop is supervised by a dedicated task, so Settings
 returns an error after five seconds instead of blocking Wi-Fi; Retry joins the
 same in-flight stop rather than starting a second teardown. There is
-no BLE provisioning flow or custom application GATT service. Camera and
-microphone inactivity are privacy boundaries: the current application never
-reads either sensor.
+no BLE provisioning flow or custom application GATT service. The camera stays
+off. The microphone stays off in default builds and is used only by the opt-in
+push-to-talk build.
 
 ## Interaction model
 
@@ -502,8 +502,9 @@ touch, P4/C6 radio, Serial, and camera-inactivity checks in
   in UI status snapshots or logs. Station credentials use ESP-IDF RAM-only
   storage, are lost on reboot, and require the user to reconnect; they are not
   persisted to flash by this application.
-- The camera and microphone are not initialized; the application contains no
-  image capture, audio recording, media storage, or media-upload path.
+- The camera stays off. Default builds also leave the microphone off. The
+  experimental push-to-talk build sends bounded audio only to its provisioned
+  HTTPS bridge, which discards audio after local transcription.
 - Custom pet artwork remains local and must not be published without explicit
   redistribution rights.
 - Review [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) before distributing
