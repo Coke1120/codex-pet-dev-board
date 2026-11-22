@@ -25,21 +25,24 @@ jobs:
     env:
       P4_DEFAULTS: ${{ github.workspace }}/esp32-p4/sdkconfig.defaults
       P4_WIRELESS_DEFAULTS: ${{ github.workspace }}/esp32-p4/sdkconfig.ci-wireless
-      P4_SAFE_BUILD: ${{ runner.temp }}/codex-pet-p4-display-safe-build
-      P4_SAFE_SDKCONFIG: ${{ runner.temp }}/codex-pet-p4-display-safe-sdkconfig
-      P4_WIRELESS_BUILD: ${{ runner.temp }}/codex-pet-p4-wireless-build
-      P4_WIRELESS_SDKCONFIG: ${{ runner.temp }}/codex-pet-p4-wireless-sdkconfig
-      P4_FIXTURE_SAFE_BUILD: ${{ runner.temp }}/codex-pet-p4-fixture-safe-build
-      P4_FIXTURE_SAFE_SDKCONFIG: ${{ runner.temp }}/codex-pet-p4-fixture-safe-sdkconfig
-      P4_FIXTURE_WIRELESS_BUILD: ${{ runner.temp }}/codex-pet-p4-fixture-wireless-build
-      P4_FIXTURE_WIRELESS_SDKCONFIG: ${{ runner.temp }}/codex-pet-p4-fixture-wireless-sdkconfig
-      C6_BUILD: ${{ runner.temp }}/codex-pet-c6-build
-      C6_SDKCONFIG: ${{ runner.temp }}/codex-pet-c6-sdkconfig
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - uses: espressif/install-esp-idf-action@8fc05d1470d5591417e7a3707a1f2bec178db4ae # v1 branch snapshot
         with:
           version: v5.5.1
+      - name: Set isolated build paths
+        run: |
+          printf '%s\n' \
+            "P4_SAFE_BUILD=$RUNNER_TEMP/codex-pet-p4-display-safe-build" \
+            "P4_SAFE_SDKCONFIG=$RUNNER_TEMP/codex-pet-p4-display-safe-sdkconfig" \
+            "P4_WIRELESS_BUILD=$RUNNER_TEMP/codex-pet-p4-wireless-build" \
+            "P4_WIRELESS_SDKCONFIG=$RUNNER_TEMP/codex-pet-p4-wireless-sdkconfig" \
+            "P4_FIXTURE_SAFE_BUILD=$RUNNER_TEMP/codex-pet-p4-fixture-safe-build" \
+            "P4_FIXTURE_SAFE_SDKCONFIG=$RUNNER_TEMP/codex-pet-p4-fixture-safe-sdkconfig" \
+            "P4_FIXTURE_WIRELESS_BUILD=$RUNNER_TEMP/codex-pet-p4-fixture-wireless-build" \
+            "P4_FIXTURE_WIRELESS_SDKCONFIG=$RUNNER_TEMP/codex-pet-p4-fixture-wireless-sdkconfig" \
+            "C6_BUILD=$RUNNER_TEMP/codex-pet-c6-build" \
+            "C6_SDKCONFIG=$RUNNER_TEMP/codex-pet-c6-sdkconfig" >> "$GITHUB_ENV"
       - name: Configure isolated real ESP32-P4 variants
         working-directory: esp32-p4
         run: |
