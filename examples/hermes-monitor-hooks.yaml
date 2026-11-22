@@ -1,0 +1,10 @@
+hooks:
+  pre_llm_call:
+    - command: '"/ABSOLUTE/CODEX_PET_RUNTIME/bin/python" "/ABSOLUTE/CODEX_PET_RUNTIME/codex_pet_monitor.py" hook hermes'
+      timeout: 3
+  post_llm_call:
+    - command: '"/ABSOLUTE/CODEX_PET_RUNTIME/bin/python" "/ABSOLUTE/CODEX_PET_RUNTIME/codex_pet_monitor.py" hook hermes'
+      timeout: 3
+  on_session_end:
+    - command: '"/ABSOLUTE/CODEX_PET_RUNTIME/bin/python" "/ABSOLUTE/CODEX_PET_RUNTIME/codex_pet_monitor.py" hook hermes'
+      timeout: 3

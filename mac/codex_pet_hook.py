@@ -84,7 +84,14 @@ def write_event(payload: Dict[str, Any], state_dir: Path) -> Path:
         "updated_at": time.time(),
     }
     destination = state_dir / (session_key(payload) + ".json")
-    fd, temporary = tempfile.mkstemp(prefix=".event-", suffix=".json", dir=str(state_dir))
+    write_private_json(destination, record)
+    return destination
+
+
+def write_private_json(destination: Path, record: Dict[str, Any]) -> None:
+    fd, temporary = tempfile.mkstemp(
+        prefix=".event-", suffix=".json", dir=str(destination.parent)
+    )
     try:
         os.fchmod(fd, 0o600)
         with os.fdopen(fd, "w", encoding="utf-8") as handle:
@@ -105,7 +112,6 @@ def write_event(payload: Dict[str, Any], state_dir: Path) -> Path:
             os.unlink(temporary)
         except FileNotFoundError:
             pass
-    return destination
 
 
 def main() -> int:

@@ -136,6 +136,9 @@ runtime_source_names=(
   codex_pet_device.py
   codex_pet_hook.py
   codex_pet_usage.py
+  codex_pet_monitor.py
+  codex_pet_monitor_settings.py
+  codex-pet-monitor.mjs
   requirements.txt
 )
 for runtime_source_name in "${runtime_source_names[@]}"; do
