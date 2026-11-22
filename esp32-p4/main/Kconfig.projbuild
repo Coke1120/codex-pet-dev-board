@@ -7,4 +7,17 @@ config CODEX_PET_C6_WIRELESS
         Enable only after flashing and verifying the matching ESP-Hosted
         firmware on the onboard ESP32-C6.
 
+config CODEX_PET_VOICE
+    bool "Enable Settings push-to-talk (JC4880P443C-I-W)"
+    depends on CODEX_PET_C6_WIRELESS && SPIRAM
+    depends on !MBEDTLS_DEBUG && LOG_MAXIMUM_LEVEL <= 3
+    select ESP_HTTP_CLIENT_ENABLE_HTTPS
+    select MBEDTLS_HAVE_TIME
+    select MBEDTLS_HAVE_TIME_DATE
+    default n
+    help
+        Record short voice messages for the HTTPS bridge. Requires the
+        factory NVS values documented in pet_voice.c and USB clock sync.
+        HTTP debug logging can print authentication headers.
+
 endmenu

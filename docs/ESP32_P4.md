@@ -15,18 +15,19 @@ JC4880P443C-I-W** variant with:
 
 The ESP32-P4 remains the application, display, and touch host. The firmware uses
 the onboard ESP32-C6 as a Wi-Fi and Bluetooth Low Energy co-processor through
-ESP-Hosted's four-bit SDIO transport. It does not initialize the camera,
-microphone, speaker output, microSD/TF card, USB Host classes, battery telemetry,
-RS-485, or the unused expansion connectors. The bare `I-W` board exposes a
+ESP-Hosted's four-bit SDIO transport. Camera, speaker output, microSD/TF, USB
+Host classes, battery telemetry, RS-485 and unused expansion connectors stay
+inactive. The microphone also stays inactive in default builds. The experimental
+[push-to-talk variant](VOICE_PTT.md) uses the onboard ES8311 only for recording. The bare `I-W` board exposes a
 speaker connector but does not guarantee that a speaker unit is fitted. Camera
 inactivity still needs confirmation on the physical unit because display/touch
 and camera share board resources.
 
 The vendor snapshot contains reference APIs for several of these peripherals,
 but it is not selected by the active CMake build. Their presence under `vendor/`
-must not be interpreted as an installed or enabled Codex Pet feature. The active
+must not be interpreted as an installed or enabled Codex Pet feature. The default
 application uses display, touch, USB Serial/JTAG, ESP32-C6 Wi-Fi station control,
-and user-controlled BLE advertising only; BLE has no provisioning flow or custom
+and user-controlled BLE advertising; BLE has no provisioning flow or custom
 application GATT service.
 
 ## Software stack
