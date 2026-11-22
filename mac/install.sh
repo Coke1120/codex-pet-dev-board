@@ -135,6 +135,7 @@ runtime_source_names=(
   codex_pet_daemon.py
   codex_pet_device.py
   codex_pet_hook.py
+  codex_pet_state.py
   codex_pet_usage.py
   requirements.txt
 )

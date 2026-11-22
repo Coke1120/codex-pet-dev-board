@@ -1,5 +1,23 @@
 # Direct Codex Desktop and CLI synchronization
 
+Codex on macOS supports **two independent companion outputs** that share the
+exact same official Codex lifecycle hooks (`mac/codex_pet_hook.py`), session
+records, four states (`idle`, `running`, `waiting`, `review`), priority order
+(`waiting > review > running > idle`), and 15-minute active TTL via
+`mac/codex_pet_state.py`:
+
+| Companion mode | Hardware required | Primary guide | Entry point |
+|---|---|---|---|
+| **Hardware Desk Companion** (ESP32-P4 over USB Serial) | GUITION JC4880P443C-I-W | This document (below) | `mac/codex_pet_daemon.py` / `mac/install.sh` |
+| **Mac-local Floating Media Player** (no board required) | None (macOS local MP4/GIF) | [`docs/MAC_PLAYER.md`](MAC_PLAYER.md) | `mac/codex_pet_player.py` |
+
+Both paths are independent and can be used alone or side-by-side. If you want
+the board-free floating window on your Mac, go straight to
+[`docs/MAC_PLAYER.md`](MAC_PLAYER.md). The remainder of this guide covers the
+ESP32-P4 USB Serial hardware companion.
+
+## Hardware Desk Companion overview
+
 The Python hook and Serial daemon connect Codex on macOS to the
 JC4880P443C-I-W over USB Serial. The ESP32-P4 negotiates lifecycle, clock, Hong
 Kong weather, and CodexBar quota synchronization before the daemon starts

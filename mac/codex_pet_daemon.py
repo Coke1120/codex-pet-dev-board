@@ -17,7 +17,7 @@ import urllib.request
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable, Iterable, List, Optional, Set, Tuple
+from typing import Any, Callable, List, Optional, Set
 
 MAC_DIR = Path(__file__).resolve().parent
 if str(MAC_DIR) not in sys.path:
@@ -32,6 +32,14 @@ from codex_pet_usage import (
     build_usage_command,
 )
 from codex_pet_device import board_score, canonicalize_usb_serial, select_p4_port
+from codex_pet_state import (
+    DEFAULT_ACTIVE_TTL,
+    VALID_STATES,
+    aggregate_state,
+    read_active_states,
+    resolve_state_dir,
+    should_send_state,
+)
 
 try:
     import serial
@@ -42,8 +50,6 @@ except ImportError as exc:
         "pyserial is required. Install it with: python3 -m pip install pyserial"
     ) from exc
 
-VALID_STATES = ("idle", "running", "waiting", "review")
-STATE_PRIORITY = {"idle": 0, "running": 1, "review": 2, "waiting": 3}
 PORT_WARNING_INTERVAL = 30.0
 KNOWN_CAPABILITIES = frozenset(("clock", "quota", "usage", "weather"))
 WEATHER_CONDITIONS = frozenset(
@@ -61,8 +67,6 @@ WEATHER_CONDITIONS = frozenset(
 OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
 MAX_UNIX_EPOCH = 253_402_250_399
 MAX_BAUD = 4_000_000
-HOOK_RECORD_NAME = re.compile(r"^[0-9a-f]{24}\.json$")
-HOOK_RECORD_KEYS = frozenset(("version", "state", "event", "updated_at"))
 
 
 def positive_float(raw: str) -> float:
@@ -365,10 +369,7 @@ def local_utc_offset_seconds(timestamp: Optional[float] = None) -> int:
 
 
 def default_state_dir() -> Path:
-    override = os.environ.get("CODEX_PET_STATE_DIR")
-    if override:
-        return Path(override).expanduser()
-    return Path.home() / "Library" / "Application Support" / "CodexPet" / "sessions"
+    return resolve_state_dir(env=os.environ, home=Path.home())
 
 
 def detected_ports() -> List[ListPortInfo]:
@@ -380,81 +381,6 @@ def detected_ports() -> List[ListPortInfo]:
 
 def choose_port(requested: str, pinned_serial: Optional[str] = None) -> Optional[str]:
     return select_p4_port(detected_ports(), requested, pinned_serial)
-
-
-def _file_identity(path: Path) -> Optional[Tuple[int, int, int, int]]:
-    try:
-        stat = path.stat()
-    except OSError:
-        return None
-    return (stat.st_dev, stat.st_ino, stat.st_size, stat.st_mtime_ns)
-
-
-def _prune_if_unchanged(
-    path: Path, identity: Optional[Tuple[int, int, int, int]]
-) -> None:
-    if identity is None or _file_identity(path) != identity:
-        return
-    try:
-        path.unlink()
-    except OSError:
-        # Another hook may have replaced it, or a transient filesystem error
-        # may make it readable again on the next poll.
-        pass
-
-
-def read_active_states(
-    state_dir: Path, now: Optional[float] = None, active_ttl: float = 900.0
-) -> List[Tuple[str, float]]:
-    current = time.time() if now is None else now
-    active: List[Tuple[str, float]] = []
-    if not state_dir.exists():
-        return active
-    for path in state_dir.glob("*.json"):
-        if HOOK_RECORD_NAME.fullmatch(path.name) is None:
-            continue
-        identity = _file_identity(path)
-        if identity is None:
-            continue
-        try:
-            record = json.loads(path.read_text(encoding="utf-8"))
-            if (
-                not isinstance(record, dict)
-                or set(record) != HOOK_RECORD_KEYS
-                or record.get("version") != 1
-                or not isinstance(record.get("event"), str)
-            ):
-                continue
-            state = record["state"]
-            updated_at = float(record["updated_at"])
-        except OSError:
-            continue
-        except (ValueError, TypeError, KeyError):
-            continue
-        if state not in VALID_STATES or not math.isfinite(updated_at):
-            _prune_if_unchanged(path, identity)
-            continue
-        age = current - updated_at
-        if age < -60 or age > active_ttl:
-            _prune_if_unchanged(path, identity)
-            continue
-        active.append((state, updated_at))
-    return active
-
-
-def aggregate_state(active: Iterable[Tuple[str, float]]) -> str:
-    entries = list(active)
-    if not entries:
-        return "idle"
-    # A recent Stop event writes idle for that session; concurrent active
-    # sessions still win through priority.
-    return max(entries, key=lambda item: (STATE_PRIORITY[item[0]], item[1]))[0]
-
-
-def should_send_state(
-    desired: str, sent: Optional[str], now: float, next_heartbeat_at: float
-) -> bool:
-    return desired != sent or now >= next_heartbeat_at
 
 
 def should_warn_port(now: float, next_warning_at: float) -> bool:
@@ -582,7 +508,7 @@ def main() -> int:
     )
     parser.add_argument("--state-dir", type=Path, default=default_state_dir())
     parser.add_argument("--poll", type=positive_float, default=0.25)
-    parser.add_argument("--active-ttl", type=positive_float, default=900.0)
+    parser.add_argument("--active-ttl", type=positive_float, default=DEFAULT_ACTIVE_TTL)
     parser.add_argument(
         "--heartbeat",
         type=positive_float,
